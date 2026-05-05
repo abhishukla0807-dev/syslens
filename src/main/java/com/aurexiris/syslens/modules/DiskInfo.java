@@ -1,9 +1,23 @@
 /**
- * DiskInfo
- * Module to collect disk partition details including total,
- * used, free space and usage percentage.
+ * DiskInfo.java
+ *
+ * Description:
+ *   DiskInfo is an InfoCollector module that retrieves details about
+ *   disk partitions using OSHI's OSFileStore API. It reports total,
+ *   used, and free space for each partition, along with usage percentage.
+ *
+ * Purpose:
+ *   - Provide detailed disk usage monitoring for SysLens.
+ *   - Support both human-readable output (collect()) and JSON export (toJson()).
+ *   - Allow contributors to extend monitoring with additional disk metrics
+ *     such as I/O statistics or filesystem attributes.
+ *
+ * Notes for Contributors:
+ *   - Use OSHI's OperatingSystem.getFileSystem().getFileStores(true).
+ *   - If labels are missing, "N/A" is used for clarity.
+ *   - Extend by adding new fields or integrating with other storage APIs.
+ *   - Use formatBytes() helper for consistent human-readable output.
  */
-
 
 package com.aurexiris.syslens.modules;
 
@@ -16,18 +30,20 @@ import java.util.List;
 
 public class DiskInfo implements InfoCollector {
 
+    // Reference to the operating system via OSHI
     private final OperatingSystem os =
             new SystemInfo().getOperatingSystem();
 
-
-    // This method returns the name of this collector, which is used as a key in the snapshot.
     @Override
     public String getName() {
         return "Disk Info";
     }
 
-    // This method collects disk information and returns it as a formatted string.
-    // It retrieves the list of file stores (partitions) from the operating system, then iterates through.
+    /**
+     * Collect disk information in a human-readable format.
+     * Includes mount point, label, type, total, used, and free space.
+     * @return formatted string with disk details
+     */
     @Override
     public String collect() {
         List<OSFileStore> stores = os.getFileSystem().getFileStores(true);
@@ -45,10 +61,6 @@ public class DiskInfo implements InfoCollector {
             long used      = total - free;
             double usedPct = total > 0 ? (used * 100.0) / total : 0.0;
 
-
-            // This method formats the disk information for each file store and appends it to the StringBuilder.
-            // It includes the mount point, name, label, type, total space, used space (with percentage), and free space.
-            //The Syntax of this method is "sb.append("""...""".formatted(...))"  which allows for multi-line string formatting.
             sb.append("""
                     Drive       : %s (%s)
                     Label       : %s
@@ -56,7 +68,7 @@ public class DiskInfo implements InfoCollector {
                     Total       : %s
                     Used        : %s (%.1f%%)
                     Free        : %s
-                    ──────────────────────────────
+                    ------------------------------
                     """.formatted(
                     store.getMount(),
                     store.getName(),
@@ -72,6 +84,10 @@ public class DiskInfo implements InfoCollector {
         return sb.toString();
     }
 
+    /**
+     * Export disk information as JSON.
+     * @return JSON string with disk details
+     */
     @Override
     public String toJson() {
         List<OSFileStore> stores = os.getFileSystem().getFileStores(true);
@@ -107,11 +123,12 @@ public class DiskInfo implements InfoCollector {
             sb.append("\n");
         }
 
-        sb.append("  ]");
+        sb.append("]");
         return sb.toString();
     }
 
-    // This helper method formats byte values into human-readable strings (e.g., KB, MB, GB) with two decimal places.
+    // Helper method to format byte values into human-readable strings
+
     private String formatBytes(long bytes) {
         if (bytes >= 1_073_741_824L)
             return String.format("%.2f GB", bytes / 1_073_741_824.0);

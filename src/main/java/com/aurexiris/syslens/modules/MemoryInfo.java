@@ -1,11 +1,24 @@
-
 /**
- * MemoryInfo
- * Module to collect RAM statistics including total, used,
- * free memory and usage percentage.
+ * MemoryInfo.java
+ *
+ * Description:
+ *   MemoryInfo is an InfoCollector module that retrieves details
+ *   about system memory (RAM and swap) using OSHI's GlobalMemory
+ *   and VirtualMemory APIs. It reports total, used, and free memory
+ *   values along with usage percentages.
+ *
+ * Purpose:
+ *   - Provide detailed memory monitoring for SysLens.
+ *   - Support both human-readable output (collect()) and JSON export (toJson()).
+ *   - Allow contributors to extend monitoring with additional memory metrics
+ *     such as per-bank details or paging statistics.
+ *
+ * Notes for Contributors:
+ *   - Uses OSHI's SystemInfo().getHardware().getMemory().
+ *   - Swap usage is reported only if swap is available.
+ *   - Extend by adding new fields or integrating with other memory APIs.
+ *   - Use formatBytes() helper for consistent human-readable output.
  */
-
-
 
 package com.aurexiris.syslens.modules;
 
@@ -16,22 +29,20 @@ import oshi.hardware.VirtualMemory;
 
 public class MemoryInfo implements InfoCollector {
 
+    // Reference to the system's memory via OSHI
     private final GlobalMemory memory =
             new SystemInfo().getHardware().getMemory();
 
-
-    // This method returns the name of this collector, which is used as a key in the snapshot.
     @Override
     public String getName() {
         return "Memory Info";
     }
 
-
-/*
-This method collects memory information and returns it as a formatted string.
-It retrieves the total, available, and used RAM, as well as the total and used swap memory.
-It then calculates the percentage of RAM and swap used and formats this information into a human-readable string format for display in the terminal.
- */
+    /**
+     * Collect memory information in a human-readable format.
+     * Includes total, used, and free RAM, as well as swap usage.
+     * @return formatted string with memory details
+     */
     @Override
     public String collect() {
         VirtualMemory vm = memory.getVirtualMemory();
@@ -55,7 +66,7 @@ It then calculates the percentage of RAM and swap used and formats this informat
                 Total RAM   : %s
                 Used RAM    : %s (%.1f%%)
                 Free RAM    : %s
-                ──────────────────────────────
+                ------------------------------
                 Total Swap  : %s
                 Used Swap   : %s (%.1f%%)
                 Free Swap   : %s
@@ -70,13 +81,10 @@ It then calculates the percentage of RAM and swap used and formats this informat
         );
     }
 
-
-    /*
-    This method converts the collected memory information into a JSON string.
-    It calculates the total, used, and available RAM and swap, as well as their usage percentages,
-    and formats this data into a structured JSON format for easy consumption by other applications or services.
-
-    */
+    /**
+     * Export memory information as JSON.
+     * @return JSON string with memory details
+     */
     @Override
     public String toJson() {
         VirtualMemory vm = memory.getVirtualMemory();
@@ -112,7 +120,7 @@ It then calculates the percentage of RAM and swap used and formats this informat
         );
     }
 
-    //This method converts bytes into a human-readable format (KB, MB, GB) with two decimal places for better readability.
+    // Helper method to format byte values into human-readable strings
     private String formatBytes(long bytes) {
         if (bytes >= 1_073_741_824L)
             return String.format("%.2f GB", bytes / 1_073_741_824.0);
