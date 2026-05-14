@@ -95,27 +95,37 @@ public class Main {
         CollectorRegistry registry = new CollectorRegistry();
 
         // Filter by module flag or load all
-        if      (argList.contains("--os"))   registry.register(new OsInfo());
-        else if (argList.contains("--cpu"))  registry.register(new CpuInfo());
-        else if (argList.contains("--ram"))  registry.register(new MemoryInfo());
-        else if (argList.contains("--disk")) registry.register(new DiskInfo());
-        else if (argList.contains("--net"))  registry.register(new NetworkInfo());
-        else if (argList.contains("--bat"))  registry.register(new BatteryInfo());
-        else if (argList.contains("--gpu"))  registry.register(new GpuInfo());
-        else if (argList.contains("--proc")) registry.register(new ProcessInfo());
+        if (argList.contains("--os"))
+            registry.register(new OsInfo());
+        else if (argList.contains("--cpu"))
+            registry.register(new CpuInfo());
+        else if (argList.contains("--ram"))
+            registry.register(new MemoryInfo());
+        else if (argList.contains("--disk"))
+            registry.register(new DiskInfo());
+        else if (argList.contains("--net"))
+            registry.register(new NetworkInfo());
+        else if (argList.contains("--bat"))
+            registry.register(new BatteryInfo());
+        else if (argList.contains("--gpu"))
+            registry.register(new GpuInfo());
+        else if (argList.contains("--proc"))
+            registry.register(new ProcessInfo());
         else {
             // Default → all modules
             registry.register(new OsInfo());
+            registry.register(new UptimeInfo());
             registry.register(new CpuInfo());
             registry.register(new MemoryInfo());
             registry.register(new DiskInfo());
-            registry.register(new NetworkInfo());
-            registry.register(new BatteryInfo());
-            registry.register(new UptimeInfo());
-            registry.register(new JavaRuntimeInfo());
             registry.register(new GpuInfo());
-            registry.register(new SensorInfo());
+
+            registry.register(new BatteryInfo());
             registry.register(new ProcessInfo());
+
+            registry.register(new JavaRuntimeInfo());
+
+            registry.register(new NetworkInfo());
         }
 
         // ── collect ──────────────────────────────────────────
@@ -124,16 +134,19 @@ public class Main {
             snapshot.add(
                     collector.getName(),
                     collector.collect(),
-                    collector.toJson()
-            );
+                    collector.toJson());
         }
 
         // ── format ───────────────────────────────────────────
         OutputFormatter formatter;
-        if      (argList.contains("--json"))  formatter = new JsonFormatter();
-        else if (argList.contains("--table")) formatter = new TableFormatter();
-        else if (argList.contains("--html"))  formatter = new HtmlFormatter();
-        else                                  formatter = new PlainTextFormatter();
+        if (argList.contains("--json"))
+            formatter = new JsonFormatter();
+        else if (argList.contains("--table"))
+            formatter = new TableFormatter();
+        else if (argList.contains("--html"))
+            formatter = new HtmlFormatter();
+        else
+            formatter = new PlainTextFormatter();
 
         String output = formatter.format(snapshot);
 
@@ -143,9 +156,12 @@ public class Main {
         // ── export to file ───────────────────────────────────
         if (argList.contains("--export")) {
             FileExporter exporter = new FileExporter();
-            if      (argList.contains("--json")) exporter.export(snapshot, "json");
-            else if (argList.contains("--html")) exporter.export(snapshot, "html");
-            else                                 exporter.export(snapshot, "text");
+            if (argList.contains("--json"))
+                exporter.export(snapshot, "json");
+            else if (argList.contains("--html"))
+                exporter.export(snapshot, "html");
+            else
+                exporter.export(snapshot, "text");
         }
 
         // ── copy to clipboard ────────────────────────────────
@@ -157,7 +173,7 @@ public class Main {
     // ── banner ───────────────────────────────────────────────
     private static void printBanner() {
         System.out.println("""
-                
+
                 ███████╗██╗   ██╗███████╗██╗     ███████╗███╗   ██╗███████╗
                 ██╔════╝╚██╗ ██╔╝██╔════╝██║     ██╔════╝████╗  ██║██╔════╝
                 ███████╗ ╚████╔╝ ███████╗██║     █████╗  ██╔██╗ ██║███████╗
@@ -171,10 +187,10 @@ public class Main {
     // ── help ─────────────────────────────────────────────────
     private static void printHelp() {
         System.out.println("""
-                
+
                 SysLens — System Information Tool v1.0.0
                 Usage: java -jar syslens.jar [options]
-                
+
                 MODULE FLAGS (show specific info only):
                   --os       OS information
                   --cpu      CPU information
@@ -184,12 +200,12 @@ public class Main {
                   --bat      Battery information
                   --gpu      GPU information
                   --proc     Process information
-                
+
                 FORMAT FLAGS:
                   --json     Output as JSON
                   --table    Output as table
                   --html     Output as HTML
-                
+
                 EXPORT FLAGS:
                   --export   Save report to file
                   --clip     Copy report to clipboard
@@ -197,7 +213,7 @@ public class Main {
                 MONITOR FLAGS:
                   --monitor  Run live monitor
                   --interval <seconds>  Refresh interval for monitor
-                
+
                 EXAMPLES:
                   java -jar syslens.jar
                   java -jar syslens.jar --cpu
