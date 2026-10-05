@@ -1,122 +1,198 @@
-
 # SysLens — System Information & Monitoring Tool
 
-SysLens is a lightweight **Java-based system monitoring utility** built with IntelliJ IDEA.  
-It collects and reports detailed information about your system’s hardware, operating system, sensors, and runtime environment, with support for multiple output formats (Plain Text, JSON, HTML, Table).
+SysLens is a lightweight, cross-platform **Java-based system monitoring utility** built with Java 21, OSHI, and Maven.  
+It collects and reports detailed metrics about your system's hardware, operating system, sensors, and runtime environment, with support for multiple output formats (Plain Text, JSON, HTML, Table) and live monitoring with alerting.
 
 ---
 
 ## Features
 
-- CPU, Memory, Disk, GPU, Battery, Network monitoring  
-- Sensor telemetry (temperature, fans, voltage) via jSensors + OSHI fallback  
-- OS & JVM runtime details  
-- Process monitoring and uptime tracking  
-- Live monitoring mode with configurable refresh an interval  
-- Multiple output formatters: PlainText, JSON, HTML, Table  
-- Export reports to file or clipboard  
+- **Hardware & System Metrics**: CPU, Memory, Disk, GPU, Battery, Network, OS, and JVM runtime details.
+- **Hardware Sensor Telemetry**: CPU temperature (in both Celsius and Fahrenheit) and CPU voltage.
+- **Process & Uptime Tracking**: Top active processes and system uptime tracking.
+- **Live Monitoring Mode**: Continuous terminal dashboard with configurable refresh interval.
+- **Health Alerting Engine**: Proactive warnings when CPU, RAM, Disk, or Temperature exceed configurable safety thresholds.
+- **Multiple Output Formatters**: PlainText, JSON, HTML, and Table formats.
+- **Export & Clipboard Integration**: Save reports to file (`syslens-reports/`) or copy directly to clipboard.
+
+---
+
+## One-Click Windows Executable (.exe)
+
+SysLens includes native Windows `.exe` launchers for instant one-click execution:
+
+- **Project Root Launcher**: Double-click [`SysLens.exe`](SysLens.exe) in the repository root.
+- **Bundled Release**: Double-click [`release/syslens/SysLens.exe`](release/syslens/SysLens.exe).
+- **Portable Standalone Package**: Double-click [`release/standalone/SysLens/SysLens.exe`](release/standalone/SysLens/SysLens.exe) (fully self-contained with bundled lightweight JRE, requires no Java installed on the target machine).
+
+### Interactive Double-Click Experience
+When double-clicked from Windows Explorer, SysLens:
+1. Automatically initializes UTF-8 console output and ANSI styling.
+2. Displays the banner and complete system snapshot report.
+3. Keeps the console window open with an interactive menu:
+   - `[1]` Refresh system snapshot
+   - `[2]` Launch Real-Time Live Monitor Dashboard
+   - `[3]` Export report to HTML (`syslens-reports/`)
+   - `[4]` Export report to JSON (`syslens-reports/`)
+   - `[Q]` Exit cleanly
+
+### Rebuilding the Executable
+Run or double-click [`build-exe.bat`](build-exe.bat) to recompile the fat JAR, regenerate the native Windows launchers, and package the standalone distribution in one step.
+
+---
+
+## Quick Start (Maven CLI)
+
+### Prerequisites
+- **Java Development Kit (JDK) 21+**
+- **Apache Maven 3.8+**
+
+### 1. Clone & Build
+```bash
+git clone https://github.com/abhishukla0807-dev/syslens.git
+cd syslens
+
+# Build the executable fat JAR
+mvn clean package
+```
+
+### 2. Run SysLens
+```bash
+# Run all modules with default formatted output
+java -jar target/syslens.jar
+
+# Run specific hardware sensors module
+java -jar target/syslens.jar --sensor
+
+# Run live monitoring mode
+java -jar target/syslens.jar --monitor --interval 3
+```
 
 ---
 
 ## Project Setup in IntelliJ IDEA
 
-### Step 1: Clone the Repository
+1. Launch IntelliJ IDEA and select **Open** on the cloned `syslens` directory.
+2. Configure Project SDK:
+   - Go to **File → Project Structure → Project**.
+   - Set the SDK to **Java 21**.
+   - Set the Language level to **21 - Preview** or **21**.
+3. Open `Main.java` located at:
+   ```
+   src/main/java/com/aurexiris/syslens/Main.java
+   ```
+4. Click the green **Run** button or press `Shift + F10`.
+
+---
+
+## Command-Line Usage
+
+### Module Flags (show specific info only)
+- `--os`     → Operating system information
+- `--cpu`    → Processor details and CPU load
+- `--ram`    → Memory (physical & swap) usage
+- `--disk`   → Disk partitions, usage, and read/write
+- `--net`    → Network interfaces and IP addresses
+- `--bat`    → Battery health, charge %, and status
+- `--gpu`    → Graphics card information and VRAM
+- `--proc`   → Top system processes
+- `--sensor` → Hardware sensors (CPU temp, voltage) *(aliases: `--sensors`, `--temp`)*
+
+### Format Flags
+- `--json`   → Structured JSON output
+- `--table`  → Tabular ASCII report with borders
+- `--html`   → Styled HTML report with dark mode
+
+### Export & Clipboard Flags
+- `--export` → Save the generated report to disk (in `syslens-reports/`)
+- `--clip`   → Copy the report directly to the system clipboard
+
+### Live Monitor Flags
+- `--monitor`            → Launch real-time live monitoring dashboard
+- `--interval <seconds>` → Refresh interval in seconds (default: 5s)
+
+### General Flags
+- `--config`      → View current configuration settings
+- `--help`, `-h`  → Display CLI usage guide
+
+### Examples
 ```bash
-git clone https://github.com/abhishukla0807-dev/syslens.git
-cd syslens
+# Export full JSON report to file
+java -jar target/syslens.jar --json --export
+
+# Output HTML report to file
+java -jar target/syslens.jar --html --export
+
+# View hardware sensors only
+java -jar target/syslens.jar --sensor
+
+# Copy CPU & temperature report to clipboard
+java -jar target/syslens.jar --sensor --clip
+
+# Run real-time monitor refreshed every 2 seconds
+java -jar target/syslens.jar --monitor --interval 2
 ```
 
-### Step 2: Open in IntelliJ IDEA
-1. Launch IntelliJ IDEA.
-2. Click on **Open** and select the cloned `syslens` directory.
-3. Wait for IntelliJ to index the project and resolve dependencies.
+---
 
-### Step 3: Configure SDK
-1. Go to **File → Project Structure → Project**.
-2. Set the Project SDK to **Java 17+**.
-3. Set the Project language level to **17**.
-4. Click **Apply** and **OK**.
+## Hardware Sensors & Temperature Implementation
 
-### Step 4: Build and Run
-1. Open `Main.java` located in `src/main/java/com/syslens/`.
-2. Click the green **Run** button or press `Shift + F10` to execute the application.
+SysLens provides hardware sensor monitoring via the dedicated `SensorInfo` module (`com.aurexiris.syslens.modules.SensorInfo`), which implements the unified `InfoCollector` interface.
 
-### Step 5: Build Artifact
-1. Go to **File → Project Structure → Artifacts**.
-2. Add a new artifact: `+ → JAR → From modules with dependencies`.
-3. Select `Main` as the main class.
-4. Click **Apply** and **OK**.
-
-### Step 6: Build the JAR
-1. Go to **Build → Build Artifacts → Build**.
-2. The JAR file will be generated in the `out/artifacts/` directory:
-   ```
-   out/artifacts/SysLens/SysLens.jar
-   ```
-
-### Step 7: Run the JAR
-```bash
-cd out/artifacts/SysLens
-java -jar SysLens.jar
+### Output Format
+```text
+==============================
+       HARDWARE SENSORS
+==============================
+CPU Temp    : 54.0°C (129.2°F)
+CPU Voltage : 1.15 V
+==============================
 ```
 
----
+### How It Works Under the Hood
+SysLens combines **LibreHardwareMonitor** (via `jLibreHardwareMonitor`) and **OSHI**:
+1. **Windows (LibreHardwareMonitor)**:
+   - SysLens bundles `jLibreHardwareMonitor`, which embeds `LibreHardwareMonitorLib.dll`.
+   - When run with **Administrator privileges**, it interfaces with low-level hardware drivers (`WinRing0`) to query CPU MSR registers (for dynamic CPU VCore voltage and core temperatures).
+2. **Cross-Platform Fallback (OSHI)**:
+   - If running on Linux or macOS, or if LibreHardwareMonitor is unavailable, SysLens seamlessly falls back to OSHI (`oshi.hardware.Sensors`).
+   - On Linux, it reads kernel sysfs (`/sys/class/thermal/` and `/sys/class/hwmon/`).
+   - On macOS, it queries the Apple System Management Controller (SMC).
 
-## Module Flags
+### Fallback & Graceful Degradation
+- If a sensor or motherboard vendor does not expose metrics, or if the terminal is not running as Administrator, SysLens safely displays `N/A (not supported / run as Admin)` rather than crashing or showing false `0.0°C` readings.
+- Third-party COM/WMI internal debug exceptions are captured and suppressed via `logback.xml` to keep terminal output clean and readable.
 
-- `--os`   → OS information
-- `--cpu`  → CPU information
-- `--ram`  → Memory information
-- `--disk` → Disk information
-- `--net`  → Network information
-- `--bat`  → Battery information
-- `--gpu`  → GPU information
-- `--proc` → Process information
-
----
-
-## Format Flags
-
-- `--json`  → Output as JSON
-- `--table` → Output as table
-- `--html`  → Output as HTML
-
----
-
-## Monitoring Mode
-
-- `--monitor` → Run live monitor
-- `--interval <seconds>` → Refresh interval
+### Proactive Thermal Alerts
+Temperature thresholds are integrated with SysLens's `AlertEngine`. In `src/main/resources/config.properties`:
+```properties
+alert.temp.warn     = 75.0
+alert.temp.critical = 85.0
+```
+During live monitoring (`--monitor`), if CPU temperature reaches or exceeds these limits, warning or critical alerts are automatically triggered.
 
 ---
 
 ## Troubleshooting / Known Issues
 
-- On Windows, OSHI may log:
-  ```
-  COM exception querying MSAcpi_ThermalZoneTemperature
-  ```
-  This means the WMI class isn’t available.
-    - Run IntelliJ as Administrator for more sensor access.
-    - Or run **LibreHardwareMonitor** in the background for richer telemetry.
-    - This error is harmless — SysLens will continue to work using fallback methods.
-
-- **Sensor data not visible in output**
-    - In some systems, CPU temperature, voltage, or fan speed may show as `N/A (not supported)`.
-    - This happens when hardware/firmware does not expose sensors or WMI is disabled.
-    - To fix: enable WMI provider in LibreHardwareMonitor (`Options → WMI → Enable`).
-    - Even with jSensors + OSHI, some laptops may still restrict sensor access.
+- **Sensor data shows as `N/A (not supported / run as Admin)` on Windows**:
+  - Low-level hardware sensors (CPU temperature, CPU VCore) require kernel-level driver access (`WinRing0`).
+  - **Solution**: Open your terminal, PowerShell, or command prompt as **Administrator**, then run:
+    ```bash
+    java -jar target/syslens.jar --sensor
+    ```
+  - Alternatively, if you run the standalone [LibreHardwareMonitor GUI](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases) with WMI enabled (`Options → WMI → Enable`), SysLens will also automatically read its WMI bridge.
 
 ---
 
 ## License
-This project is licensed under the **MIT License**.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## Acknowledgements
-- [OSHI](https://github.com/oshi/oshi) — Java system information library
-- jSensors (github.com in Bing) [(bing.com in Bing)](https://www.bing.com/search?q="https%3A%2F%2Fwww.bing.com%2Fsearch%3Fq%3D%2522https%253A%252F%252Fgithub.com%252Fprofesorfalken%252FJSensors%2522") — Hardware sensor access
-- [IntelliJ IDEA](https://www.jetbrains.com/idea/) — Development environment
-```
-
+- [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) & [jLibreHardwareMonitor](https://github.com/pandalxb/jLibreHardwareMonitor) — Hardware monitoring library for Windows sensors (voltage, temperature)
+- [OSHI](https://github.com/oshi/oshi) — Native Operating System and Hardware Information library for Java
+- [Gson](https://github.com/google/gson) — JSON serialization
+- [Jansi](https://github.com/fusesource/jansi) — ANSI terminal color formatting
+- [Logback](https://logback.qos.ch/) — Reliable logging framework

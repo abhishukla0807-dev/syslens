@@ -1,0 +1,10 @@
+target/
+out/
+lib/
+.idea/
+*.iml
+.vscode/
+dependency-reduced-pom.xml
+syslens-reports/
+syslens-logs/
+release/standalone/

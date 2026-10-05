@@ -35,6 +35,7 @@ import com.aurexiris.syslens.modules.MemoryInfo;
 import com.aurexiris.syslens.modules.DiskInfo;
 import com.aurexiris.syslens.modules.NetworkInfo;
 import com.aurexiris.syslens.modules.BatteryInfo;
+import com.aurexiris.syslens.modules.SensorInfo;
 import com.aurexiris.syslens.output.PlainTextFormatter;
 
 public class LiveMonitor {
@@ -87,6 +88,7 @@ public class LiveMonitor {
                 registry.register(new DiskInfo());
                 registry.register(new NetworkInfo());
                 registry.register(new BatteryInfo());
+                registry.register(new SensorInfo());
 
                 SystemSnapshot snapshot = new SystemSnapshot();
                 for (InfoCollector collector : registry.getAll()) {

@@ -39,8 +39,12 @@ import com.aurexiris.syslens.monitor.LiveMonitor;
 import com.aurexiris.syslens.output.*;
 import com.aurexiris.syslens.util.Logger;
 
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
+import org.fusesource.jansi.AnsiConsole;
 
 public class Main {
 
@@ -49,6 +53,13 @@ public class Main {
      * Parses command-line arguments and executes appropriate actions.
      */
     public static void main(String[] args) {
+        try {
+            System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+            System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
+            AnsiConsole.systemInstall();
+        } catch (Throwable ignored) {
+        }
+
         List<String> argList = Arrays.asList(args);
 
         // ── config & logging ────────────────────────────────
@@ -64,12 +75,14 @@ public class Main {
         // Print config if requested
         if (argList.contains("--config")) {
             config.printAll();
+            System.exit(0);
             return;
         }
 
         // ── help ─────────────────────────────────────────────
         if (argList.contains("--help") || argList.contains("-h")) {
             printHelp();
+            System.exit(0);
             return;
         }
 
@@ -85,13 +98,74 @@ public class Main {
                 }
             }
             new LiveMonitor(interval).start();
+            System.exit(0);
             return;
         }
 
-        // ── banner ───────────────────────────────────────────
-        printBanner();
+        // If run with command-line flags, execute one-shot CLI mode
+        if (!argList.isEmpty() && !argList.contains("--interactive") && !argList.contains("-i")) {
+            printBanner();
+            runOneShot(argList);
+            System.exit(0);
+            return;
+        }
 
-        // ── registry ─────────────────────────────────────────
+        // Interactive / Double-click mode (no args or --interactive)
+        runInteractiveMode();
+        System.exit(0);
+    }
+
+    private static void runInteractiveMode() {
+        printBanner();
+        runOneShot(List.of());
+
+        // Check if console is available for interactive input
+        if (System.console() == null) {
+            return;
+        }
+
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.println();
+            System.out.println("────────────────────────────────────────────────────────────────────────────");
+            System.out.println("  SysLens Menu: [1] Refresh  [2] Live Monitor  [3] Export HTML  [4] Export JSON  [Q] Exit");
+            System.out.println("────────────────────────────────────────────────────────────────────────────");
+            System.out.print("Select an option [1-4 / Q to exit]: ");
+            String input;
+            try {
+                if (!scanner.hasNextLine()) break;
+                input = scanner.nextLine().trim();
+            } catch (Exception e) {
+                break;
+            }
+
+            if (input.equalsIgnoreCase("q") || input.equalsIgnoreCase("0") || input.isEmpty() || input.equalsIgnoreCase("exit")) {
+                System.out.println("Exiting SysLens. Goodbye!");
+                break;
+            }
+
+            switch (input) {
+                case "1" -> {
+                    System.out.println("\nRefreshing system snapshot...\n");
+                    runOneShot(List.of());
+                }
+                case "2" -> {
+                    new LiveMonitor(5).start();
+                }
+                case "3" -> {
+                    SystemSnapshot snapshot = collectSnapshot(new CollectorRegistry());
+                    new FileExporter().export(snapshot, "html");
+                }
+                case "4" -> {
+                    SystemSnapshot snapshot = collectSnapshot(new CollectorRegistry());
+                    new FileExporter().export(snapshot, "json");
+                }
+                default -> System.out.println("Unrecognized option: " + input);
+            }
+        }
+    }
+
+    private static void runOneShot(List<String> argList) {
         CollectorRegistry registry = new CollectorRegistry();
 
         // Filter by module flag or load all
@@ -111,6 +185,8 @@ public class Main {
             registry.register(new GpuInfo());
         else if (argList.contains("--proc"))
             registry.register(new ProcessInfo());
+        else if (argList.contains("--sensor") || argList.contains("--sensors") || argList.contains("--temp"))
+            registry.register(new SensorInfo());
         else {
             // Default → all modules
             registry.register(new OsInfo());
@@ -119,23 +195,15 @@ public class Main {
             registry.register(new MemoryInfo());
             registry.register(new DiskInfo());
             registry.register(new GpuInfo());
-
+            registry.register(new SensorInfo());
             registry.register(new BatteryInfo());
             registry.register(new ProcessInfo());
-
             registry.register(new JavaRuntimeInfo());
-
             registry.register(new NetworkInfo());
         }
 
         // ── collect ──────────────────────────────────────────
-        SystemSnapshot snapshot = new SystemSnapshot();
-        for (InfoCollector collector : registry.getAll()) {
-            snapshot.add(
-                    collector.getName(),
-                    collector.collect(),
-                    collector.toJson());
-        }
+        SystemSnapshot snapshot = collectSnapshot(registry);
 
         // ── format ───────────────────────────────────────────
         OutputFormatter formatter;
@@ -170,6 +238,30 @@ public class Main {
         }
     }
 
+    private static SystemSnapshot collectSnapshot(CollectorRegistry registry) {
+        if (registry.getAll().isEmpty()) {
+            registry.register(new OsInfo());
+            registry.register(new UptimeInfo());
+            registry.register(new CpuInfo());
+            registry.register(new MemoryInfo());
+            registry.register(new DiskInfo());
+            registry.register(new GpuInfo());
+            registry.register(new SensorInfo());
+            registry.register(new BatteryInfo());
+            registry.register(new ProcessInfo());
+            registry.register(new JavaRuntimeInfo());
+            registry.register(new NetworkInfo());
+        }
+        SystemSnapshot snapshot = new SystemSnapshot();
+        for (InfoCollector collector : registry.getAll()) {
+            snapshot.add(
+                    collector.getName(),
+                    collector.collect(),
+                    collector.toJson());
+        }
+        return snapshot;
+    }
+
     // ── banner ───────────────────────────────────────────────
     private static void printBanner() {
         System.out.println("""
@@ -200,6 +292,7 @@ public class Main {
                   --bat      Battery information
                   --gpu      GPU information
                   --proc     Process information
+                  --sensor   Hardware sensors (temperature, voltage)
 
                 FORMAT FLAGS:
                   --json     Output as JSON

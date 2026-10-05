@@ -40,6 +40,8 @@ public class AlertEngine {
     private double ramCritThreshold;
     private double diskWarnThreshold;
     private double diskCritThreshold;
+    private double tempWarnThreshold;
+    private double tempCritThreshold;
 
     /**
      * Constructor: loads thresholds from AppConfig.
@@ -48,12 +50,14 @@ public class AlertEngine {
     public AlertEngine() {
         AppConfig config = AppConfig.getInstance();
 
-        this.cpuWarnThreshold  = config.getDouble("alert.cpu.warn",     75.0);
-        this.cpuCritThreshold  = config.getDouble("alert.cpu.critical", 90.0);
-        this.ramWarnThreshold  = config.getDouble("alert.ram.warn",     75.0);
-        this.ramCritThreshold  = config.getDouble("alert.ram.critical", 90.0);
-        this.diskWarnThreshold = config.getDouble("alert.disk.warn",    80.0);
-        this.diskCritThreshold = config.getDouble("alert.disk.critical",95.0);
+        this.cpuWarnThreshold  = config.getDouble("alert.cpu.warn",      75.0);
+        this.cpuCritThreshold  = config.getDouble("alert.cpu.critical",  90.0);
+        this.ramWarnThreshold  = config.getDouble("alert.ram.warn",      75.0);
+        this.ramCritThreshold  = config.getDouble("alert.ram.critical",  90.0);
+        this.diskWarnThreshold = config.getDouble("alert.disk.warn",     80.0);
+        this.diskCritThreshold = config.getDouble("alert.disk.critical", 95.0);
+        this.tempWarnThreshold = config.getDouble("alert.temp.warn",      75.0);
+        this.tempCritThreshold = config.getDouble("alert.temp.critical",  85.0);
     }
 
     // Setters for thresholds
@@ -72,6 +76,11 @@ public class AlertEngine {
         this.diskCritThreshold = crit;
     }
 
+    public void setTempThresholds(double warn, double crit) {
+        this.tempWarnThreshold = warn;
+        this.tempCritThreshold = crit;
+    }
+
     /**
      * Check snapshot results against thresholds.
      * @param snapshot system snapshot containing text results
@@ -84,9 +93,10 @@ public class AlertEngine {
             String content = entry.getValue();
 
             switch (name) {
-                case "CPU Info"    -> checkCpu(content);
-                case "Memory Info" -> checkRam(content);
-                case "Disk Info"   -> checkDisk(content);
+                case "CPU Info"         -> checkCpu(content);
+                case "Memory Info"      -> checkRam(content);
+                case "Disk Info"        -> checkDisk(content);
+                case "Hardware Sensors" -> checkSensors(content);
             }
         }
     }
@@ -137,6 +147,39 @@ public class AlertEngine {
                     String.format("%.1f%% used (threshold: %.0f%%)",
                             used, diskWarnThreshold));
         }
+    }
+
+    // Hardware Sensors temperature check
+    private void checkSensors(String content) {
+        double temp = parseTemperature(content, "CPU Temp");
+        if (temp <= 0) return;
+
+        if (temp >= tempCritThreshold) {
+            alert("CRITICAL", "TEMPERATURE",
+                    String.format("%.1f°C (threshold: %.0f°C)",
+                            temp, tempCritThreshold));
+        } else if (temp >= tempWarnThreshold) {
+            alert("WARNING", "TEMPERATURE",
+                    String.format("%.1f°C (threshold: %.0f°C)",
+                            temp, tempWarnThreshold));
+        }
+    }
+
+    // Utility: parse temperature from snapshot text
+    private double parseTemperature(String content, String key) {
+        try {
+            for (String line : content.split("\n")) {
+                if (line.contains(key) && line.contains("°C")) {
+                    String part = line.substring(line.indexOf(':') + 1).trim();
+                    int degIdx = part.indexOf("°C");
+                    if (degIdx != -1) {
+                        String num = part.substring(0, degIdx).replaceAll("[^0-9.]", "").trim();
+                        return Double.parseDouble(num);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return -1;
     }
 
     // Utility: parse percentage values from snapshot text
